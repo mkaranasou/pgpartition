@@ -1,0 +1,2 @@
+# pgpartition
+Generate postgres partitions
