@@ -8,9 +8,12 @@ class TemporalPartitionedTable(PartitionedTable):
     Representation of a partitioned by date table.
     """
     def __init__(
-            self, name, active_period, partition_field,
+            self, 
+            name, 
+            active_period, partition_field,
             partitioned_by=PartitionByEnum.week, index_by=None,
-            create_catch_all=True, strict=False
+            create_catch_all=True, 
+            strict=False
     ):
         super().__init__(
             name, partition_field, partitioned_by, index_by, create_catch_all
@@ -32,7 +35,11 @@ class TemporalPartitionedTable(PartitionedTable):
 
     @property
     def start(self):
+        """
+        The start date of the partitions
+        """
         if self.partitions:
+            #todo: catchall?
             return min(self.partitions).active_period.start
         return self.active_period.start
 
@@ -45,7 +52,7 @@ class TemporalPartitionedTable(PartitionedTable):
             return p.active_period.end
         return self.active_period.end
 
-    def self_check(self):
+    def self_check(self) -> str:
         return TableTools.get_temporal_check(
             self.partition_field,
             self.start,

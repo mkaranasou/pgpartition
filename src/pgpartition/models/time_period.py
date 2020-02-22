@@ -21,7 +21,7 @@ class TimePeriod(object):
         return 'TimePeriod from {} to {}'.format(self.start, self.end)
 
     def __repr__(self):
-        return '<{}>'.format(self)
+        return '<{}>'.format(str(self))
 
     def __eq__(self, other):
         return self.start == other.start and self.end == other.end
@@ -44,6 +44,8 @@ class TimePeriod(object):
     def split_by_day(self, full_day=False):
         """
         Splits the time period in days
+        :full_day bool: consider the end of the day as 23:59 if True,
+        otherwise use the time self.end has
         :rtype: list[TimePeriod]
         :return: a list that contains time periods that when combined together
         they amount to the initial / current period of time
@@ -58,7 +60,7 @@ class TimePeriod(object):
             end = end-timedelta(seconds=1)
 
         while True:
-            if end >= self.end or full_day and (end.date() == self.end.date()):
+            if end >= self.end or (full_day and (end.date() == self.end.date())):
                 days.append(TimePeriod(start, self.end))
                 return days
             days.append(TimePeriod(start, end))

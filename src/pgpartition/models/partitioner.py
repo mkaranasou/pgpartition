@@ -4,7 +4,7 @@ from pgpartition.models.base import BasePartitioner
 from pgpartition.models.partitioned_table import TemporalPartitionedTable
 
 
-class TemporalDataPartitioner(BasePartitioner):
+class TemporalPartitioner(BasePartitioner):
     """
     Partition data based on a date field.
     """
@@ -46,7 +46,11 @@ class TemporalDataPartitioner(BasePartitioner):
             index_by=index_by,
             strict=self.strict
         )
-        self.partitions = self.partitioned_table.partition()
+        # self.partitions = self.partitioned_table.partition()
 
     def to_dict(self):
         return self.partitioned_table.to_dict()
+        
+    def partition(self):
+        self.partitions = self.parent_table.partition()
+        return self.to_dict()
