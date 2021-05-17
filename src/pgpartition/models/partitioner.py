@@ -1,7 +1,8 @@
-from pgpartition.helpers.enums import PartitionByEnum
 from pgpartition.helpers.util import get_default_data_path
 from pgpartition.models.base import BasePartitioner
+from pgpartition.models.config import Config
 from pgpartition.models.partitioned_table import TemporalPartitionedTable
+from pgpartition.models.time_period import TimePeriod
 
 
 class TemporalPartitioner(BasePartitioner):
@@ -10,14 +11,9 @@ class TemporalPartitioner(BasePartitioner):
     """
     def __init__(
             self,
-            partitioned_table_name,
-            partition_field,
-            time_window,
-            strict=False,
-            partition_by=PartitionByEnum.week,
-            index_by=None,
+            config: Config,
             template_path=get_default_data_path(),
-            template_name='data_partitioning.jinja2'
+            template_name='partitioning_template.jinja2'
     ):
         """
         Partitions the parent table by a time period, e.g. w for per week
@@ -31,19 +27,25 @@ class TemporalPartitioner(BasePartitioner):
         :param index_by: list of fields to index the partitions by
         """
         super().__init__(
-            partitioned_table_name,
-            partition_field,
-            index_by=index_by,
+            config.partition.parent_table,
+            config.partition.column,
+            split_by=config.partition.details.split_by,
+            index_by=config.partition.details.index_by,
             template_path=template_path,
             template_name=template_name,
         )
-        self.strict = strict
+        self.config = config
+        self.time_period = TimePeriod(
+            self.config.partition.details.since,
+            self.config.partition.details.until,
+        )
+        self.strict = config.partition.details.strict
         self.partitioned_table = TemporalPartitionedTable(
-            partitioned_table_name,
-            time_window,
-            partition_field,
-            partitioned_by=partition_by,
-            index_by=index_by,
+            config.partition.parent_table,
+            self.time_period,
+            config.partition.column,
+            partitioned_by=self.split_by,
+            index_by=self.index_by,
             strict=self.strict
         )
         # self.partitions = self.partitioned_table.partition()

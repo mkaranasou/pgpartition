@@ -1,5 +1,5 @@
 from pgpartition.helpers.enums import PartitionByEnum
-from pgpartition.helpers.util import TableTools
+from pgpartition.helpers.util import get_temporal_check
 from pgpartition.models.base import PartitionedTable
 
 
@@ -10,8 +10,10 @@ class TemporalPartitionedTable(PartitionedTable):
     def __init__(
             self, 
             name, 
-            active_period, partition_field,
-            partitioned_by=PartitionByEnum.week, index_by=None,
+            period,
+            partition_field,
+            partitioned_by=PartitionByEnum.week,
+            index_by=None,
             create_catch_all=True, 
             strict=False
     ):
@@ -19,9 +21,9 @@ class TemporalPartitionedTable(PartitionedTable):
             name, partition_field, partitioned_by, index_by, create_catch_all
         )
         self.strict = strict
-        self.active_period = active_period
+        self.period = period
         self._partition_prefix = self.get_partition_prefix()
-        self.start_year = self.active_period.start.year
+        self.start_year = self.period.start.year
 
     @property
     def partition_prefix(self):
@@ -30,30 +32,35 @@ class TemporalPartitionedTable(PartitionedTable):
         :return:
         """
         return self._partition_prefix.replace(
-            '%year', str(self.active_period.start.year)
+            '%year', str(self.period.start.year)
         ).replace('%unit', '')
 
     @property
     def start(self):
         """
-        The start date of the partitions
+        Start date - min date of all partitions
+        :return:
         """
         if self.partitions:
             #todo: catchall?
             return min(self.partitions).active_period.start
-        return self.active_period.start
+        return self.period.start
 
     @property
     def end(self):
+        """
+        End date for all partitions
+        :return:
+        """
         if self.partitions:
             p = max(self.partitions)
             if p.is_catch_all:
                 p = self.partitions[-2]
             return p.active_period.end
-        return self.active_period.end
+        return self.period.end
 
-    def self_check(self) -> str:
-        return TableTools.get_temporal_check(
+    def partitions_bounds_check(self):
+        return get_temporal_check(
             self.partition_field,
             self.start,
             self.end,
@@ -99,9 +106,9 @@ class TemporalPartitionedTable(PartitionedTable):
         :rtype: dict[int][TimePeriod]
         """
         if self.partitioned_by == PartitionByEnum.w:
-            return self.active_period.split_by_year_and_week(self.strict)
+            return self.period.split_by_year_and_week(self.strict)
         elif self.partitioned_by == PartitionByEnum.m:
-            return self.active_period.split_by_year_and_month(self.strict)
+            return self.period.split_by_year_and_month(self.strict)
         else:
             raise ValueError(
                 f'Unknown split by option {str(self.partitioned_by)}')

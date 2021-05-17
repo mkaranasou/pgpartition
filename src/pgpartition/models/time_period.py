@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 import isoweek as isoweek
 from dateutil.tz import tzutc
 
-from src.pgpartition.helpers.util import get_days_in_year, get_days_in_month
+from pgpartition.helpers.util import get_days_in_year, get_days_in_month
 
 
 class TimePeriod(object):
@@ -12,7 +12,10 @@ class TimePeriod(object):
     Represents a time period, with helper functions
     """
     def __init__(self, start, end, utc=True):
+        self.start = start
+        self.end = end
         self.utc = utc
+
         if self.utc:
             self.start = self.start.replace(tzinfo=tzutc())
             self.end = self.end.replace(tzinfo=tzutc())
@@ -24,23 +27,44 @@ class TimePeriod(object):
         return '<{}>'.format(str(self))
 
     def __eq__(self, other):
-        return self.start == other.start and self.end == other.end
+        other_start, other_end = self._type_check(other)
+        return self.start == other_start and self.end == other_end
 
     def __ne__(self, other):
-        return self.start != other.start or self.end != other.end
+        other_start, other_end = self._type_check(other)
+        return self.start != other_start or self.end != other_end
 
     def __gt__(self, other):
-        return self.start > other.start
+        other_start, _ = self._type_check(other)
+        return self.start > other_start
 
     def __ge__(self, other):
-        return self.start >= other.start
+        other_start, _ = self._type_check(other)
+        return self.start >= other_start
 
     def __le__(self, other):
-        return self.start <= other.start
+        other_start, _ = self._type_check(other)
+        return self.start <= other_start
 
     def __lt__(self, other):
-        return self.start < other.start
-
+        other_start, _ = self._type_check(other)
+        return self.start < other_start
+    
+    def _type_check(self, other):
+        """
+        Check if other is instance of either TimePeriod or datetime.
+        Returns start, end 
+        :param T other: 
+        :return: tuple start, end if TimePeriod else tuple other, None
+        """
+        if isinstance(other, self.__class__):
+            return other.start, other.end
+        elif isinstance(other, datetime):
+            return other, 
+        
+        raise ValueError(f'{other} and '
+                         f'{self.__class__.__name__} cannot be compared.')
+    
     def split_by_day(self, full_day=False):
         """
         Splits the time period in days

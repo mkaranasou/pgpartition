@@ -1,0 +1,21 @@
+database:                   # optional, if exec is set to true
+  name: pgpartition         # the database name
+  user: !ENV ${DB_USER}
+  password: !ENV ${DB_PASS}
+  host: !ENV ${DB_HOST}
+  port: !ENV ${DB_PORT}
+
+partition:
+  exec: False
+  output_file: '/path/to/output/file.sql'
+  parent_table: 'test'
+  partition_type: 'temporal'  # default, can be omitted
+  column: 'name'              # which column of parent table to partition by
+  details:
+    since: '2021-01-01 00:00:00'
+    until: '2021-12-31 23:59:59'
+    strict: False
+    split_by: 'week'
+    index_by:                 # the fields to index by - one index supported currently
+      - id
+      - name

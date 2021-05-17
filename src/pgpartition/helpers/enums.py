@@ -27,3 +27,11 @@ class BaseStrEnum(Enum):
 class PartitionByEnum(BaseStrEnum):
     week = 'week'
     month = 'month'
+
+
+class BoundsEnum(Enum):
+    closed = 0
+    closed_left = 1
+    closed_right = 2
+    open = 3
+    equality = -1

@@ -19,7 +19,7 @@ tests_require = [
 
 setup(name='pgpartition',
       version='0.0.1',
-      description='Create data partitions for a Postgres table',
+      description='Handle data partitions for a Postgres table',
       long_description=long_description,
       tests_require=tests_require,
       extras_require={

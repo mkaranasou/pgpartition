@@ -1,8 +1,9 @@
--- File generated at: {{ now() }}
+----- File generated at: {{ now() }}
+----- Partitioning table {{ partitioned_table.name }} by {{ partitioned_table.partition_field }}
 
-{% for partition in partitions %}
--- {{ partition.name }}--------------------------------------------------------
-
+-- Do not drop if the table exists, just check and move on - we don't check on restrictions though.
+{% for partition in partitioned_table.partitions %}
+----- {{ partition.name }}--------------------------------------------------------
 CREATE TABLE IF NOT EXISTS {{ partition.name }} (
     CHECK ({{ partition.constraint_check }})
 ) INHERITS ({{name}});
@@ -12,8 +13,9 @@ CREATE TABLE IF NOT EXISTS {{ partition.name }} (
 {% endfor %}
 
 
------ Create the insert trigger function ---------------------------------------
-CREATE OR REPLACE FUNCTION {{ name }}_insert_trigger()
+----- Insert trigger function: check the partition field conditions and
+----- either insert in the respective table, or in the catch all partition
+CREATE OR REPLACE FUNCTION {{ partitioned_table.name }}_insert_trigger()
 RETURNS TRIGGER AS $$
 DECLARE
   target_partitioned_by text;
@@ -22,20 +24,20 @@ BEGIN
     SELECT {{ field_value }} INTO target_partitioned_by;
     table_name = '{{ partition_prefix }}' || target_partitioned_by;
 
-    -- RAISE NOTICE 'Table name %', table_name;
-
-    IF ({{ self_check }}) THEN EXECUTE 'INSERT INTO ' || table_name || ' SELECT * FROM (SELECT $1.*) AS t' USING NEW;
+    -- If the value of the field is between the bounds of the partitions, then we're good to use the table name as is
+    IF ({{ partitioned_table.partitions_bounds_check }} AND SELECT to_regclass('{{ partitioned_table.name }}.'||table_name||')) THEN EXECUTE 'INSERT INTO ' || table_name || ' SELECT * FROM (SELECT $1.*) AS t' USING NEW;
     ELSE
-        INSERT INTO {{ catch_all_partition_name }} VALUES (NEW.*);
-        RAISE NOTICE 'Date out of range. Inserting into the catch all partition...';
+        -- Something went really wrong, try inserting into the catch all partition
+        INSERT INTO {{ partitioned_table.catch_all_partition_name }} VALUES (NEW.*);
+        RAISE NOTICE 'Out of range. Inserting into the catch all partition...';
     END IF;
     RETURN NULL;
 END;
 $$
 LANGUAGE plpgsql;
 
------ Attach before insert trigger to table --------
-DROP TRIGGER IF EXISTS before_insert_{{ name }}_trigger on {{ name }};
-CREATE TRIGGER before_insert_{{ name }}_trigger
-BEFORE INSERT ON {{ name }}
-FOR EACH ROW EXECUTE PROCEDURE {{ name }}_insert_trigger();
+----- Before insert trigger: for every row, execute the above function to place the row in the correct partition
+DROP TRIGGER IF EXISTS before_insert_{{ partitioned_table.name }}_trigger on {{ partitioned_table.name }};
+CREATE TRIGGER before_insert_{{ partitioned_table.name }}_trigger
+BEFORE INSERT ON {{ partitioned_table.name }}
+FOR EACH ROW EXECUTE PROCEDURE {{ partitioned_table.name }}_insert_trigger();
